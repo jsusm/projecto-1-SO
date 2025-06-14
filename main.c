@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/wait.h>
 
 // interfaces to read
 struct Configuration {
@@ -20,7 +22,7 @@ int main(){
 
 	struct List* files = malloc(sizeof(struct List));
 
-	// leer el directorio
+	// read directory
 	DIR* dir;
 	struct dirent* ent;
 	
@@ -46,6 +48,53 @@ int main(){
 		file = file->next;
 	}
 	
+
+	// create a pipe for comunicate with the child process
+	int pipefd[2];
+	pid_t pid;
+
+	if(pipe(pipefd) == -1){
+		perror("Cannot create pipe");
+		list_free(files);
+		exit(EXIT_FAILURE);
+	}
+
+	pid = fork();
+
+	if(pid == 0) {
+		// child process code
+		close(pipefd[0]);
+
+		// redirect stdout to pipe write end
+		dup2(pipefd[1], STDOUT_FILENO);
+
+		close(pipefd[1]);
+
+		char fileNameArg[512];
+		snprintf(fileNameArg, 512, "%s%s", content_directory, files->head->data);
+
+		execlp("md5sum", "md5sum", fileNameArg, NULL);
+		perror("error executing md5sum with execlp");
+		exit(EXIT_FAILURE);
+	}else {
+		// parent process code
+		// close pipe write end
+		close(pipefd[1]);
+		
+		// 33 bytes giving space for \0
+		char sumBuffer[33];
+
+		int bytesReaded = read(pipefd[0], sumBuffer, 32);
+		if(bytesReaded > 0) {
+			printf("Leido desde proceso hijo: %s\n", sumBuffer);
+		}else {
+			printf("no se lello nada del proceso hijo\n");
+		}
+
+		close(pipefd[0]);
+		wait(NULL);
+	}
+
 	list_free(files);
 	return 0;
 }
