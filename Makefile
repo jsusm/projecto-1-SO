@@ -8,7 +8,7 @@
 TARGET = main
 # Coloque aqui los nombres de todos los archivos compilados con extension .o
 # necesarios para su proyecto.
-OBJECTS = main.o sayHello.o linkedList.o
+OBJECTS = main.o sayHello.o linkedList.o getFileSums.o
 CFLAGS = -O3 -Wall 
 LDLIBS = -pthread
 
@@ -27,6 +27,7 @@ TARGET: $(OBJECTS)
 main.o: main.c
 sayHello.o: sayHello.c
 linkedList.o: linkedList.c
+getFileSums.o: getFileSums.c
 
 # Esta regla sustituye las banderas que se pasan al compilador por banderas
 # utiles para depuracion.
