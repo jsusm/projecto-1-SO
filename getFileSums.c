@@ -83,11 +83,12 @@ int getfilesSumsInDirectory(char *directory, struct List *files,
       close(pipefd[1]);
 
       int bytesReaded = read(pipefd[0], fileData->sum, 32);
+      fileData->sum[32] = 0;
 
       if (bytesReaded > 0) {
-        printf("Leido desde proceso hijo: %s\n", fileData->sum);
+        // printf("Leido desde proceso hijo: %s\n", fileData->sum);
       } else {
-        printf("no se lello nada del proceso hijo\n");
+        // printf("no se lello nada del proceso hijo\n");
       }
 
       close(pipefd[0]);
