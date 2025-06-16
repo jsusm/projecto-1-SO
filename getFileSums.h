@@ -3,10 +3,11 @@
 /** Structure to hold filename and data in a linked list
  */
 struct FileSumData {
-  int pipefd[2];
   char *filename;
   char sum[33];
 };
+
+void copySumData(struct FileSumData* dest, struct FileSumData* source);
 
 /** Linked List Node structure
  */
@@ -33,6 +34,11 @@ void fileSumList_append(struct FileSumList *list, struct FileSumData *data);
 /** Free the list and its nodes
  */
 void fileSumList_free(struct FileSumList *list);
+
+/** Returns the pointer to the FileSumNode that match the filename
+ * returns NULL if is not in the list
+ */
+struct FileSumNode* fileSumList_getNode(struct FileSumList* list, char* filename);
 
 /** Populate the list with sum of the files in the files list
  * with md5sum, it creates a child process for each entry in

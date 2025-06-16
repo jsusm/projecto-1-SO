@@ -1,10 +1,15 @@
-#include "linkedList.h"
 #include "getFileSums.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+void copySumData(struct FileSumData* dest, struct FileSumData* source){
+      dest->filename = malloc(strlen(source->filename) + 1);
+      strcpy(dest->filename, source->filename);
+      strcpy(dest->sum, source->sum);
+}
 
 void FileSumNode_free(struct FileSumNode *node) {
   if (node == NULL) {
