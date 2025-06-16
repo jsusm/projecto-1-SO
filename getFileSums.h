@@ -34,10 +34,8 @@ void fileSumList_append(struct FileSumList *list, struct FileSumData *data);
  */
 void fileSumList_free(struct FileSumList *list);
 
-/** Extracts the sum of the files in the file List and save the
- * results in the results list, it creates child processes for 
- * every file and get the sum md5sum command and returns back 
- * with a pipe, some files can be protected under root.
+/** Populate the list with sum of the files in the files list
+ * with md5sum, it creates a child process for each entry in
+ * the list, returns 1 in failure
  */
-int getfilesSumsInDirectory(char *directory, struct List *files,
-                            struct FileSumList *results);
+int getfilesSumsInDirectory(char *directory, struct FileSumList *files);

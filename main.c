@@ -1,9 +1,9 @@
 #include "getFileSums.h"
-#include "linkedList.h"
 #include "sayHello.h"
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -23,8 +23,8 @@ int main() {
   // read content_directory and get the file sums
   // every conf->interval seconds
   while (1) {
-    struct List *files = malloc(sizeof(struct List));
-    files->head = NULL;
+    struct FileSumList *fileSumList = malloc(sizeof(struct FileSumList));
+    fileSumList->head = NULL;
 
     // read directory
     DIR *dir;
@@ -37,16 +37,20 @@ int main() {
     }
     while ((ent = readdir(dir)) != NULL) {
       if (ent->d_type == DT_REG) { // is a regular file
-        list_append_back(files, ent->d_name);
+        // create file data structure
+        struct FileSumData* filedata = malloc(sizeof(struct FileSumData));
+
+        filedata->filename = malloc(strlen(ent->d_name) + 1);
+        strcpy(filedata->filename, ent->d_name);
+        filedata->sum[32]=0;
+
+        fileSumList_append(fileSumList, filedata);
       }
     }
     closedir(dir);
 
     // Get file sums
-    struct FileSumList *fileSumList = malloc(sizeof(struct FileSumList));
-    fileSumList->head = NULL;
-
-    getfilesSumsInDirectory(content_directory, files, fileSumList);
+    getfilesSumsInDirectory(content_directory, fileSumList);
 
     // print file sums
     puts("Files and sums:");
@@ -57,7 +61,6 @@ int main() {
       fileSumNode = fileSumNode->next;
     }
 
-    list_free(files);
     fileSumList_free(fileSumList);
     sleep(conf.interval);
   }

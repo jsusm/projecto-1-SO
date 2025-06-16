@@ -38,9 +38,21 @@ void fileSumList_free(struct FileSumList *list) {
   free(list);
 }
 
-int getfilesSumsInDirectory(char *directory, struct List *files,
-                            struct FileSumList *results) {
-  struct Node *file = files->head;
+struct FileSumNode* fileSumList_getNode(struct FileSumList* list, char* filename) {
+  struct FileSumNode* curr = list->head;
+  while(curr != NULL){
+    if(strcmp(curr->data->filename, filename) == 0) {
+      break;
+    }
+
+    curr = curr->next;
+  }
+
+  return curr;
+}
+
+int getfilesSumsInDirectory(char *directory, struct FileSumList *files) {
+  struct FileSumNode *file = files->head;
 
   while (file != NULL) {
     // create a pipe for comunicate with the child process
@@ -49,16 +61,8 @@ int getfilesSumsInDirectory(char *directory, struct List *files,
 
     if (pipe(pipefd) == -1) {
       perror("Cannot create pipe");
-      list_free(files);
       return 1;
     }
-
-    // create a fileSum node
-    struct FileSumData *fileData = malloc(sizeof(struct FileSumData));
-
-    fileData->filename = malloc(strlen(file->data) + 1);
-    strcpy(fileData->filename, file->data);
-    fileData->sum[0] = '\0';
 
     pid = fork();
 
@@ -71,8 +75,9 @@ int getfilesSumsInDirectory(char *directory, struct List *files,
 
       close(pipefd[1]);
 
+      // create the argument for md5sum (create an absolute path for the file)
       char fileNameArg[512];
-      snprintf(fileNameArg, 512, "%s%s", directory, fileData->filename);
+      snprintf(fileNameArg, 512, "%s%s", directory, file->data->filename);
 
       execlp("md5sum", "md5sum", fileNameArg, NULL);
       perror("error executing md5sum with execlp");
@@ -82,8 +87,9 @@ int getfilesSumsInDirectory(char *directory, struct List *files,
       // close pipe write end
       close(pipefd[1]);
 
-      int bytesReaded = read(pipefd[0], fileData->sum, 32);
-      fileData->sum[32] = 0;
+      // read the sum through the pipe
+      int bytesReaded = read(pipefd[0], file->data->sum, 32);
+      file->data->sum[32] = 0;
 
       if (bytesReaded > 0) {
         // printf("Leido desde proceso hijo: %s\n", fileData->sum);
@@ -93,7 +99,6 @@ int getfilesSumsInDirectory(char *directory, struct List *files,
 
       close(pipefd[0]);
 
-      fileSumList_append(results, fileData);
       wait(NULL);
       file = file->next;
     }
