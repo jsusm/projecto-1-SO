@@ -1,7 +1,8 @@
 #include <stdio.h>     
 #include <stdlib.h>     
 #include <string.h>     
-#include <sys/stat.h>   
+#include <sys/stat.h>
+#include <signal.h>   
 #include <stdint.h>     
 #include <time.h>       
 #include <unistd.h>     
@@ -121,7 +122,6 @@ int packupModifiedFiles(const char *logDirectory, struct List *modifiedList) {
 
         free(buffer);
         fclose(current_file);
-        printf("  Archivo %s empaquetado.\n", filename_only);
 
         current_file_node = current_file_node->next;
     }
@@ -139,8 +139,38 @@ int packupModifiedFiles(const char *logDirectory, struct List *modifiedList) {
         return 1;
     }
 
-    fclose(pak_file);
-    printf("Archivo .pak cerrado exitosamente.\n");
+    fclose(pak_file);;
+    int success = compressPak(pak_filepath);
+    if(success != 0){
+        perror("The file could not be compressed");
+        return 1;
+    }
 
     return 0;
+}
+
+int compressPakFile(char *pakFile) {
+
+    int end=0;
+    pid_t pid;
+    pid = fork(); // Create a child process
+
+    if (pid == -1) {
+        perror("Error creating fork");
+        return -1;
+    } 
+    
+    else if (pid == 0) {
+        execlp("gzip", "gzip", pakFile, (char *)NULL); //Execute syscall gz to compress file
+        end=1;
+        //If the command return a value it means it wasn't successful
+        perror("Error executing gzip command with execlp");
+        exit(1); // Child process exits with failure status
+    } 
+    
+    else {
+        if(end){
+            printf("Compressed Successfuly");
+        }
+    }
 }

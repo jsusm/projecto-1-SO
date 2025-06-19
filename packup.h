@@ -9,5 +9,6 @@ int verifyDirectoryExistense(){};
 
 int packupModifiedFiles(const char *logDirectory, struct List *modifiedList){};
 
+int compressPak(const char *pakFile){};
 
 #endif
