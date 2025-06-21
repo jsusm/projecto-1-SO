@@ -2,26 +2,36 @@
 #include <stdlib.h>     
 #include <string.h>     
 #include <sys/stat.h>
-#include <signal.h>   
 #include <stdint.h>     
 #include <time.h>       
 #include <unistd.h>     
-#include "linkedList.h"
+#include "packup.h"
 
-typedef struct {
-    char filename[32];
-    uint64_t filesize; 
-} FileHeader;
-
-#define BUFFER_SIZE 4096
+int compressPakFile(char *pakFile);
 
 int verifyDirectoryExistence() {
+    char *log_dir_parent = "/var/log/PROYECTO SO 1";
     char *log_dir = "/var/log/PROYECTO SO 1/logs";
-    //Use stat() to check, if the returned value is -1 means the directory couldn't be found.
+    // check the parent directory of log_dir
     struct stat st;
+    if (stat(log_dir_parent, &st) == -1) { 
+        // Make the syscall mkdir
+        if (mkdir(log_dir_parent, 0755) == -1) {
+            // Check if the directory could be created
+            perror("Error creating log directory");
+            return -1;
+        }
+    } 
+
+    // If the directory was found, check if it is actually a directory.
+    else if (!S_ISDIR(st.st_mode)) { 
+        return -1; //The path is not a directory
+    }
+
+    //Use stat() to check, if the returned value is -1 means the directory couldn't be found.
     if (stat(log_dir, &st) == -1) { 
         // Make the syscall mkdir
-        if (mkdir(log_dir) == -1) {
+        if (mkdir(log_dir, 0755) == -1) {
             // Check if the directory could be created
             perror("Error creating log directory");
             return -1;
@@ -37,7 +47,7 @@ int verifyDirectoryExistence() {
 }
 
 
-int packupModifiedFiles(const char *logDirectory, struct List *modifiedList) {
+int packupModifiedFiles(const char *logDirectory, struct FileSumList *modifiedList) {
     FILE *pak_file = NULL;
     char pak_filepath[512]; // Path for .pak file
     char timestamp_str[128]; //To get a string containing the date-hour for file naming
@@ -60,9 +70,9 @@ int packupModifiedFiles(const char *logDirectory, struct List *modifiedList) {
     }
 
     //Iterate over modifiedList to check if it is already in directory 
-    struct Node *current_file_node = modifiedList->head; 
+    struct FileSumNode *current_file_node = modifiedList->head;
     while (current_file_node != NULL) {
-        const char *filename_only = current_file_node->data;
+        const char *filename_only = current_file_node->data->filename;
         char full_current_filepath[512];
         snprintf(full_current_filepath, sizeof(full_current_filepath), "%s%s", logDirectory, filename_only); //to write in full_current_filepath the fill_path of this file
 
@@ -140,7 +150,7 @@ int packupModifiedFiles(const char *logDirectory, struct List *modifiedList) {
     }
 
     fclose(pak_file);;
-    int success = compressPak(pak_filepath);
+    int success = compressPakFile(pak_filepath);
     if(success != 0){
         perror("The file could not be compressed");
         return 1;
@@ -173,4 +183,5 @@ int compressPakFile(char *pakFile) {
             printf("Compressed Successfuly");
         }
     }
+    return 0;
 }

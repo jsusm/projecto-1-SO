@@ -7,6 +7,7 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "packup.h"
 
 // directory we are goint to read from
 char *content_directory = "/var/log/";
@@ -34,6 +35,8 @@ int main() {
   struct FileSumList *lastFiles = malloc(sizeof(struct FileSumList));
   lastFiles->head = NULL;
 
+  /* ---------- Check for changes in content_directory ---------- */
+
   // read content_directory and get the file sums
   // every conf->interval seconds
   while (1) {
@@ -45,6 +48,7 @@ int main() {
     struct dirent *ent;
 
     dir = opendir(content_directory);
+    // this should never happen
     if (dir == NULL) {
       perror("could not open directory");
       exit(EXIT_FAILURE);
@@ -93,6 +97,7 @@ int main() {
     }
 
     // print file sums
+    // TODO: Remove this puts
     if (changedFiles->head == NULL) {
       puts("No files has changed");
     } else {
@@ -100,12 +105,18 @@ int main() {
       puts("Files That Change");
       struct FileSumNode *fileSumNode = changedFiles->head;
       while (fileSumNode != NULL) {
-        printf("\tfilename: %s, sum: %s\n", fileSumNode->data->filename,
+        printf("\tfilename: %s\t\t sum: %s\n", fileSumNode->data->filename,
                fileSumNode->data->sum);
         fileSumNode = fileSumNode->next;
       }
     }
 
+
+    /* ---------- Create .pak file and compress ---------- */
+    packupModifiedFiles(content_directory, changedFiles);
+
+    /* ---------- Clean up lists ---------- */
+    
     // copy currentfiles into lastFiles
     // first we delete lastFiles
     fileSumList_free(lastFiles);

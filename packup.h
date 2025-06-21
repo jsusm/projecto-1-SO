@@ -2,13 +2,19 @@
 #define packup_h
 
 #include <stdint.h>
+#include "getFileSums.h"
 
-typedef struct FileHeader{};
+typedef struct {
+    char filename[32];
+    uint64_t filesize; 
+} FileHeader;
 
-int verifyDirectoryExistense(){};
+#define BUFFER_SIZE 4096
 
-int packupModifiedFiles(const char *logDirectory, struct List *modifiedList){};
+int verifyDirectoryExistense();
 
-int compressPak(const char *pakFile){};
+int packupModifiedFiles(const char *logDirectory, struct FileSumList *modifiedList);
+
+int compressPak(const char *pakFile);
 
 #endif

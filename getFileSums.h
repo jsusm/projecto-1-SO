@@ -1,3 +1,6 @@
+#ifndef GET_FILE_SUM_H
+#define GET_FILE_SUM_H
+
 #include "linkedList.h"
 
 /** Structure to hold filename and data in a linked list
@@ -45,3 +48,5 @@ struct FileSumNode* fileSumList_getNode(struct FileSumList* list, char* filename
  * the list, returns 1 in failure
  */
 int getfilesSumsInDirectory(char *directory, struct FileSumList *files);
+
+#endif
