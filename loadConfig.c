@@ -3,24 +3,15 @@
 #include <string.h>
 #include <syslog.h>
 #include <unistd.h>
-#include <errno.h>
+#include "loadConfig.h"
 
-#define PATH "/etc/proyecto so 1/proy1.ini"
-#define MAX 80
-
-struct Configuration {
-    int interval;
-    char* log_tag;
-};
-
-
-int read_configuration(struct Configuration *config) {
+int load_configuration(struct Configuration *config) {
     FILE *file = NULL;
     char line[MAX];
     char *value_start;
     config->log_tag = NULL;
 
-    file = fopen(PATH, "r");
+    file = fopen(CONFIG_PATH, "r");
     if (!file) {
         openlog("ProyectoSO1_Init", LOG_PID | LOG_CONS, LOG_USER);
         syslog(LOG_ERR, "Error opening configuration file");
@@ -65,33 +56,33 @@ int read_configuration(struct Configuration *config) {
 }
 
 
-int main() {
-    struct Configuration config = {0, NULL};
+// int main() {
+//     struct Configuration config = {0, NULL};
 
-    ///it is checked if the file exists.
-    if (access(PATH, F_OK) != 0) {
-        openlog("ProyectoSO1_Init", LOG_PID | LOG_CONS, LOG_USER);
-        syslog(LOG_ERR, "Configuration file not found. Terminating");
-        closelog();
-        return 1;
-    }
+//     ///it is checked if the file exists.
+//     if (access(CONFIG_PATH, F_OK) != 0) {
+//         openlog("ProyectoSO1_Init", LOG_PID | LOG_CONS, LOG_USER);
+//         syslog(LOG_ERR, "Configuration file not found. Terminating");
+//         closelog();
+//         return 1;
+//     }
 
-    if (read_configuration(&config) != 0) {
-        return 1; 
-    }
-    printf("Valor de 'interval': %d segundos\n", config.interval);
-    printf("Valor de 'log tag': '%s'\n", config.log_tag); 
-     closelog();
-    openlog(config.log_tag, LOG_PID | LOG_CONS, LOG_USER);
+//     if (read_configuration(&config) != 0) {
+//         return 1; 
+//     }
+//     printf("Valor de 'interval': %d segundos\n", config.interval);
+//     printf("Valor de 'log tag': '%s'\n", config.log_tag); 
+//      closelog();
+//     openlog(config.log_tag, LOG_PID | LOG_CONS, LOG_USER);
 
-    // --- Syslog para probar la estructura ---
-    syslog(LOG_INFO, "Configuration loaded successfully.");
-    syslog(LOG_INFO, "Configured interval: %d seconds.", config.interval); // Usando config.interval
-    syslog(LOG_INFO, "Configured log tag: '%s'.", config.log_tag);       // Usando config.log_tag
-    syslog(LOG_DEBUG, "This is a debug message demonstrating the log tag: %s", config.log_tag); // Otra prueba
+//     // --- Syslog para probar la estructura ---
+//     syslog(LOG_INFO, "Configuration loaded successfully.");
+//     syslog(LOG_INFO, "Configured interval: %d seconds.", config.interval); // Usando config.interval
+//     syslog(LOG_INFO, "Configured log tag: '%s'.", config.log_tag);       // Usando config.log_tag
+//     syslog(LOG_DEBUG, "This is a debug message demonstrating the log tag: %s", config.log_tag); // Otra prueba
 
 
-    closelog();
+//     closelog();
 
-    return 0;
-}
+//     return 0;
+// }

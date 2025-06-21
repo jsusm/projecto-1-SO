@@ -1,4 +1,5 @@
 #include "getFileSums.h"
+#include "loadConfig.h"
 #include "sayHello.h"
 #include <dirent.h>
 #include <stdio.h>
@@ -7,18 +8,28 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-// interfaces to read
-struct Configuration {
-  int interval;
-  char *log_tag;
-};
-
 // directory we are goint to read from
 char *content_directory = "/var/log/";
 
 int main() {
 
+  /* ---------- Load configuration ---------- */
+
   struct Configuration conf = {2, "PROY_SO_1"};
+
+  /// it is checked if the file exists.
+  if (access(CONFIG_PATH, F_OK) != 0) {
+    openlog("ProyectoSO1_Init", LOG_PID | LOG_CONS, LOG_USER);
+    syslog(LOG_ERR, "Configuration file not found. Terminating");
+    closelog();
+    return 1;
+  }
+
+  if (load_configuration(&conf) != 0) {
+    return 1;
+  }
+  printf("Valor de 'interval': %d segundos\n", conf.interval);
+  printf("Valor de 'log tag': '%s'\n", conf.log_tag);
 
   struct FileSumList *lastFiles = malloc(sizeof(struct FileSumList));
   lastFiles->head = NULL;
