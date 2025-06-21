@@ -3,8 +3,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/syslog.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "log.h"
 
 void copySumData(struct FileSumData* dest, struct FileSumData* source){
       dest->filename = malloc(strlen(source->filename) + 1);
@@ -66,7 +68,7 @@ int getfilesSumsInDirectory(char *directory, struct FileSumList *files) {
     pid_t pid;
 
     if (pipe(pipefd) == -1) {
-      perror("Cannot create pipe");
+      _syslog("Cannot create pipe", LOG_ERR);
       return 1;
     }
 
@@ -88,7 +90,7 @@ int getfilesSumsInDirectory(char *directory, struct FileSumList *files) {
       snprintf(fileNameArg, 512, "%s%s", directory, file->data->filename);
 
       execlp("md5sum", "md5sum", fileNameArg, NULL);
-      perror("error executing md5sum with execlp");
+      _syslog("error executing md5sum with execlp", LOG_ERR);
       exit(EXIT_FAILURE);
     } else {
       // parent process code

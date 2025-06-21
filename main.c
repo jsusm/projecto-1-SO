@@ -1,12 +1,13 @@
 #include "getFileSums.h"
 #include "loadConfig.h"
+#include "log.h"
 #include "packup.h"
-#include "sayHello.h"
 #include "writePID.h"
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/syslog.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -17,7 +18,7 @@ int main() {
 
   /* ---------- Load configuration ---------- */
 
-  struct Configuration conf = {2, "PROY_SO_1"};
+  struct Configuration *conf = malloc(sizeof(struct Configuration));
 
   /// it is checked if the file exists.
   if (access(CONFIG_PATH, F_OK) != 0) {
@@ -27,17 +28,21 @@ int main() {
     return 1;
   }
 
-  if (load_configuration(&conf) != 0) {
+  if (load_configuration(conf) != 0) {
     return 1;
   }
-  printf("Valor de 'interval': %d segundos\n", conf.interval);
-  printf("Valor de 'log tag': '%s'\n", conf.log_tag);
+  setConf(conf);
+  char *message = (char *)malloc(256);
+  sprintf(message, "Valor de 'interval': %d segundos\n", conf->interval);
+  _syslog(message, LOG_INFO);
+  sprintf(message, "Valor de 'log tag': '%s'\n", conf->log_tag);
+  _syslog(message, LOG_INFO);
+
+  /* ---------- Check for changes in content_directory ---------- */
 
   struct FileSumList *lastFiles = malloc(sizeof(struct FileSumList));
   lastFiles->head = NULL;
 
-  /* ---------- Check for changes in content_directory ---------- */
-  printf("writing to file %d\n", getpid());
   writePID(getpid(), 0);
 
   int interval = 0;
@@ -56,7 +61,11 @@ int main() {
     dir = opendir(content_directory);
     // this should never happen
     if (dir == NULL) {
-      perror("could not open directory");
+
+      sprintf(message, "could not open the directory: '%s'\n",
+              content_directory);
+      _syslog(message, LOG_ERR);
+
       exit(EXIT_FAILURE);
     }
     while ((ent = readdir(dir)) != NULL) {
@@ -102,23 +111,16 @@ int main() {
       file = file->next;
     }
 
-    // print file sums
-    // TODO: Remove this puts
     if (changedFiles->head == NULL) {
-      puts("No files has changed");
+      _syslog("No files has changed\n", LOG_INFO);
     } else {
-
-      puts("Files That Change");
-      struct FileSumNode *fileSumNode = changedFiles->head;
-      while (fileSumNode != NULL) {
-        printf("\tfilename: %s\t\t sum: %s\n", fileSumNode->data->filename,
-               fileSumNode->data->sum);
-        fileSumNode = fileSumNode->next;
-      }
+      _syslog("Changes detected\n", LOG_INFO);
     }
 
     /* ---------- Create .pak file and compress ---------- */
-    packupModifiedFiles(content_directory, changedFiles);
+    if (packupModifiedFiles(content_directory, changedFiles) != 0) {
+      _syslog("Error creating .pak files or compressing them", LOG_ERR);
+    }
 
     /* ---------- Clean up lists ---------- */
 
@@ -138,7 +140,7 @@ int main() {
     }
 
     fileSumList_free(currentFiles);
-    sleep(conf.interval);
+    sleep(conf->interval);
   }
   return 0;
 }

@@ -1,8 +1,6 @@
 #ifndef GET_FILE_SUM_H
 #define GET_FILE_SUM_H
 
-#include "linkedList.h"
-
 /** Structure to hold filename and data in a linked list
  */
 struct FileSumData {

@@ -1,10 +1,13 @@
 #include "packup.h"
+#include "log.h"
 #include "writePID.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/syslog.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -19,7 +22,7 @@ int verifyDirectoryExistence() {
     // Make the syscall mkdir
     if (mkdir(log_dir_parent, 0755) == -1) {
       // Check if the directory could be created
-      perror("Error creating log directory");
+      _syslog("Error creating log directory", LOG_ERR);
       return -1;
     }
   }
@@ -35,7 +38,7 @@ int verifyDirectoryExistence() {
     // Make the syscall mkdir
     if (mkdir(log_dir, 0755) == -1) {
       // Check if the directory could be created
-      perror("Error creating log directory");
+      _syslog("Error creating log directory", LOG_ERR);
       return -1;
     }
   }
@@ -70,7 +73,7 @@ int packupModifiedFiles(const char *logDirectory,
   // Open .pak file to truncate files name
   pak_file = fopen(pak_filepath, "wb");
   if (pak_file == NULL) {
-    perror("Error al abrir el archivo .pak de salida");
+    _syslog("Error al abrir el archivo .pak de salida", LOG_ERR);
     return 1;
   }
 
@@ -104,7 +107,7 @@ int packupModifiedFiles(const char *logDirectory,
 
     // Change name
     if (fwrite(&header, sizeof(FileHeader), 1, pak_file) != 1) {
-      perror("Error al escribir la cabecera en el .pak");
+      _syslog("Error al escribir la cabecera en el .pak", LOG_ERR);
       fclose(pak_file);
       return 1;
     }
@@ -112,7 +115,7 @@ int packupModifiedFiles(const char *logDirectory,
     // Check file content to write, by reading the content
     current_file = fopen(full_current_filepath, "rb");
     if (current_file == NULL) {
-      perror("Error al abrir el archivo de origen para lectura");
+      _syslog("Error al abrir el archivo de origen para lectura", LOG_ERR);
       current_file_node = current_file_node->next;
       continue;
     }
@@ -120,7 +123,7 @@ int packupModifiedFiles(const char *logDirectory,
     // Read and write content in a buffer
     buffer = (char *)malloc(BUFFER_SIZE);
     if (buffer == NULL) {
-      perror("Error al asignar memoria para el búfer de lectura");
+      _syslog("Error al asignar memoria para el búfer de lectura", LOG_ERR);
       fclose(current_file);
       fclose(pak_file);
       return 1;
@@ -129,7 +132,7 @@ int packupModifiedFiles(const char *logDirectory,
     size_t bytes_read;
     while ((bytes_read = fread(buffer, 1, BUFFER_SIZE, current_file)) > 0) {
       if (fwrite(buffer, 1, bytes_read, pak_file) != bytes_read) {
-        perror("Error al escribir el contenido en el .pak");
+        _syslog("Error al escribir el contenido en el .pak", LOG_ERR);
         free(buffer);
         fclose(current_file);
         fclose(pak_file);
@@ -151,7 +154,7 @@ int packupModifiedFiles(const char *logDirectory,
   fin_header.filesize = 0;
 
   if (fwrite(&fin_header, sizeof(FileHeader), 1, pak_file) != 1) {
-    perror("Error al escribir la cabecera 'FIN'");
+    _syslog("Error al escribir la cabecera 'FIN'", LOG_ERR);
     fclose(pak_file);
     return 1;
   }
@@ -160,7 +163,7 @@ int packupModifiedFiles(const char *logDirectory,
   ;
   int success = compressPakFile(pak_filepath);
   if (success != 0) {
-    perror("The file could not be compressed");
+    _syslog("The file could not be compressed", LOG_ERR);
     return 1;
   }
 
@@ -174,7 +177,7 @@ int compressPakFile(char *pakFile) {
   pid = fork(); // Create a child process
 
   if (pid == -1) {
-    perror("Error creating fork");
+    _syslog("Error creating fork", LOG_ERR);
     return -1;
   }
 
@@ -185,27 +188,30 @@ int compressPakFile(char *pakFile) {
     execlp("gzip", "gzip", pakFile,
            (char *)NULL); // Execute syscall gz to compress file
     // If the command return a value it means it wasn't successful
-    perror("Error executing gzip command with execlp");
+    _syslog("Error executing gzip command with execlp", LOG_ERR);
     exit(1); // Child process exits with failure status
   }
 
-  //Parent is waiting for his child to end the process
+  // Parent is waiting for his child to end the process
   else {
-    if (waitpid(pid, &status, 0) == -1) { 
-            perror("Error waiting for child process");
-            return -1;
-        }
+    if (waitpid(pid, &status, 0) == -1) {
+      _syslog("Error waiting for child process", LOG_ERR);
+      return -1;
+    }
 
-        // Check the exit status of the child process to determine success or failure.
-        if (WIFEXITED(status)) {
-            if (WEXITSTATUS(status) == 0) {
-                return 0;
-            } else {
-                perror("Gzip error");
-                return -1; 
-            }
-        } else {
-            return -1; 
+    // Check the exit status of the child process to determine success or
+    // failure.
+    if (WIFEXITED(status)) {
+      if (WEXITSTATUS(status) == 0) {
+        return 0;
+      } else {
+        _syslog("Gzip error", LOG_ERR);
+        return -1;
+      }
+    } else {
+      return -1;
+    }
   }
+
   return 0;
 }
