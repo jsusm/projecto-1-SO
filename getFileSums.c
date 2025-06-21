@@ -1,4 +1,5 @@
 #include "getFileSums.h"
+#include "writePID.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -74,6 +75,8 @@ int getfilesSumsInDirectory(char *directory, struct FileSumList *files) {
     if (pid == 0) {
       // child process code
       close(pipefd[0]);
+
+      writePID(getpid(), 1);
 
       // redirect stdout to pipe write end
       dup2(pipefd[1], STDOUT_FILENO);

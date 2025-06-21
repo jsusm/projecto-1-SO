@@ -1,13 +1,14 @@
 #include "getFileSums.h"
 #include "loadConfig.h"
+#include "packup.h"
 #include "sayHello.h"
+#include "writePID.h"
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include "packup.h"
 
 // directory we are goint to read from
 char *content_directory = "/var/log/";
@@ -36,10 +37,15 @@ int main() {
   lastFiles->head = NULL;
 
   /* ---------- Check for changes in content_directory ---------- */
+  printf("writing to file %d\n", getpid());
+  writePID(getpid(), 0);
+
+  int interval = 0;
 
   // read content_directory and get the file sums
   // every conf->interval seconds
   while (1) {
+    writeInterval(interval++);
     struct FileSumList *currentFiles = malloc(sizeof(struct FileSumList));
     currentFiles->head = NULL;
 
@@ -111,12 +117,11 @@ int main() {
       }
     }
 
-
     /* ---------- Create .pak file and compress ---------- */
     packupModifiedFiles(content_directory, changedFiles);
 
     /* ---------- Clean up lists ---------- */
-    
+
     // copy currentfiles into lastFiles
     // first we delete lastFiles
     fileSumList_free(lastFiles);
