@@ -169,7 +169,7 @@ int packupModifiedFiles(const char *logDirectory,
 
 int compressPakFile(char *pakFile) {
 
-  int end = 0;
+  int status;
   pid_t pid;
   pid = fork(); // Create a child process
 
@@ -184,16 +184,28 @@ int compressPakFile(char *pakFile) {
 
     execlp("gzip", "gzip", pakFile,
            (char *)NULL); // Execute syscall gz to compress file
-    end = 1;
     // If the command return a value it means it wasn't successful
     perror("Error executing gzip command with execlp");
     exit(1); // Child process exits with failure status
   }
 
+  //Parent is waiting for his child to end the process
   else {
-    if (end) {
-      printf("Compressed Successfuly");
-    }
+    if (waitpid(pid, &status, 0) == -1) { 
+            perror("Error waiting for child process");
+            return -1;
+        }
+
+        // Check the exit status of the child process to determine success or failure.
+        if (WIFEXITED(status)) {
+            if (WEXITSTATUS(status) == 0) {
+                return 0;
+            } else {
+                perror("Gzip error");
+                return -1; 
+            }
+        } else {
+            return -1; 
   }
   return 0;
 }
